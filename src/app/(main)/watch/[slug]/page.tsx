@@ -8,6 +8,7 @@ import { useWatchHistory } from '@/hooks/use-watch-history';
 import { VideoPlayer } from '@/components/content/video-player';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ArrowLeft } from 'lucide-react';
+import type { Content, Episode } from '@/types/database';
 
 export default function WatchPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -40,11 +41,11 @@ export default function WatchPage() {
     setLoading(true);
     setError('');
 
-    const { data: contentData, error: contentError } = await supabase
+    const { data: contentData, error: contentError } = await (supabase as any)
       .from('content')
       .select('*')
       .eq('slug', slug)
-      .single();
+      .single() as { data: Content | null; error: any };
 
     if (contentError || !contentData) {
       setError('Content not found');
@@ -59,11 +60,11 @@ export default function WatchPage() {
     let videoUrl = '';
 
     if (episodeId) {
-      const { data: epData, error: epError } = await supabase
+      const { data: epData, error: epError } = await (supabase as any)
         .from('episodes')
         .select('*')
         .eq('id', episodeId)
-        .single();
+        .single() as { data: Episode | null; error: any };
 
       if (epError || !epData) {
         setError('Episode not found');
@@ -93,7 +94,7 @@ export default function WatchPage() {
 
     // Load existing progress
     if (user) {
-      const query = supabase
+      const query = (supabase as any)
         .from('watch_history')
         .select('progress')
         .eq('user_id', user.id)
