@@ -32,7 +32,21 @@ export default function RegisterPage() {
     });
 
     if (error) {
-      toast.error(error.message);
+      if (error.message.toLowerCase().includes('already registered') ||
+          error.message.toLowerCase().includes('already exists') ||
+          error.message.toLowerCase().includes('email address is already')) {
+        toast.error('An account with this email already exists. Please sign in instead.');
+      } else {
+        toast.error(error.message);
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Supabase silently succeeds when email already exists (no error returned)
+    // but returns an identityData of null — detect this case
+    if (data.user && !data.user.identities?.length) {
+      toast.error('An account with this email already exists. Please sign in instead.');
       setLoading(false);
       return;
     }
