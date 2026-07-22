@@ -1,43 +1,40 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
-// Supabase sends auth errors (expired OTP, access denied, etc.) to the Site URL (/).
-// This component reads those error params and redirects to the login page
-// with a clean, user-friendly message.
+// Supabase sends all auth redirects (codes AND errors) to the Site URL (/)
+// when the redirectTo URL isn't in the dashboard's allowed list.
+// This component intercepts those params and routes them correctly.
 export function SupabaseErrorRedirect() {
-  const router = useRouter();
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const hash = new URLSearchParams(window.location.hash.replace('#', ''));
 
-    // Supabase sent a code to the root URL instead of /auth/callback
-    // (happens when redirectTo isn't in the Supabase allowed-redirects list)
-    // Forward it to the callback route so the session is exchanged correctly.
+    // A ?code= means Supabase sent a PKCE auth code here instead of /auth/callback.
+    // Use window.location.href (full page nav) so the API route is actually invoked —
+    // router.replace() doesn't follow server-side redirects from API routes.
     const code = params.get('code');
     if (code) {
-      router.replace(`/auth/callback?code=${code}&next=/auth/reset-password`);
+      window.location.href = `/auth/callback?code=${encodeURIComponent(code)}&next=/auth/reset-password`;
       return;
     }
 
+    // Error params — redirect to login with a clean message
     const errorCode = params.get('error_code') || hash.get('error_code');
     const errorDesc = params.get('error_description') || hash.get('error_description');
 
     if (!errorCode) return;
 
     let message = 'Something went wrong. Please try again.';
-
     if (errorCode === 'otp_expired') {
       message = 'This password reset link has expired. Please request a new one.';
     } else if (errorCode === 'access_denied') {
       message = 'Access denied. Please request a new link.';
     } else if (errorDesc) {
-      message = errorDesc.replace(/\+/g, ' ');
+      message = decodeURIComponent(errorDesc.replace(/\+/g, ' '));
     }
 
-    router.replace(`/auth/login?error=${encodeURIComponent(message)}`);
+    window.location.href = `/auth/login?error=${encodeURIComponent(message)}`;
   }, []);
 
   return null;
