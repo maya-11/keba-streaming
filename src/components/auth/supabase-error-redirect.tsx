@@ -13,6 +13,15 @@ export function SupabaseErrorRedirect() {
     const params = new URLSearchParams(window.location.search);
     const hash = new URLSearchParams(window.location.hash.replace('#', ''));
 
+    // Supabase sent a code to the root URL instead of /auth/callback
+    // (happens when redirectTo isn't in the Supabase allowed-redirects list)
+    // Forward it to the callback route so the session is exchanged correctly.
+    const code = params.get('code');
+    if (code) {
+      router.replace(`/auth/callback?code=${code}&next=/auth/reset-password`);
+      return;
+    }
+
     const errorCode = params.get('error_code') || hash.get('error_code');
     const errorDesc = params.get('error_description') || hash.get('error_description');
 
