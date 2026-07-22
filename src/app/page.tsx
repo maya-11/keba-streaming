@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { Play, Download, Monitor, Smartphone, Tv, Shield } from 'lucide-react';
+import { SupabaseErrorRedirect } from '@/components/auth/supabase-error-redirect';
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-dark-950">
+      <SupabaseErrorRedirect />
       <nav className="flex items-center justify-between px-4 py-4 md:px-8">
         <span className="text-3xl font-bold text-primary-500">KEBA</span>
         <div className="flex gap-3">
