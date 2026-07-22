@@ -14,5 +14,9 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/auth/login?error=Could not authenticate`);
+  // Redirect to login with a user-friendly error message
+  const errorMsg = encodeURIComponent(
+    'This link has expired or is invalid. Please request a new one.'
+  );
+  return NextResponse.redirect(`${origin}/auth/login?error=${errorMsg}`);
 }

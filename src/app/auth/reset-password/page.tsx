@@ -19,12 +19,16 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    if (password.length < 8) {
+      toast.error('Your password must be at least 8 characters long.');
+      return;
+    }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
+      toast.error('Your password must meet the minimum security requirements.');
       return;
     }
     if (password !== confirm) {
-      toast.error('Passwords do not match');
+      toast.error('Passwords do not match. Please check and try again.');
       return;
     }
 
@@ -32,7 +36,14 @@ export default function ResetPasswordPage() {
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      toast.error(error.message);
+      const msg = error.message.toLowerCase();
+      if (msg.includes('same password') || msg.includes('different from')) {
+        toast.error('Your new password must be different from your current password.');
+      } else if (msg.includes('weak password') || msg.includes('password should')) {
+        toast.error('Your password must meet the minimum security requirements.');
+      } else {
+        toast.error('Failed to update password. Your reset link may have expired. Please request a new one.');
+      }
       setLoading(false);
       return;
     }
@@ -44,7 +55,7 @@ export default function ResetPasswordPage() {
     setTimeout(async () => {
       await supabase.auth.signOut();
       router.push('/auth/login');
-    }, 2500);
+    }, 3000);
   };
 
   return (
@@ -62,8 +73,7 @@ export default function ResetPasswordPage() {
               </div>
               <h1 className="mb-2 text-2xl font-bold">Password updated!</h1>
               <p className="text-dark-400">
-                Your password has been changed successfully. Redirecting you to
-                sign in…
+                Your password has been changed successfully. Redirecting you to sign in…
               </p>
             </div>
           ) : (
@@ -74,37 +84,31 @@ export default function ResetPasswordPage() {
               </p>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm text-dark-300">
-                    New password
-                  </label>
+                  <label className="mb-1 block text-sm text-dark-300">New password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="input-field pr-10"
-                      placeholder="At least 6 characters"
+                      placeholder="Min. 8 characters"
                       required
-                      minLength={6}
+                      minLength={8}
                       autoFocus
+                      autoComplete="new-password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5" />
-                      ) : (
-                        <Eye className="h-5 w-5" />
-                      )}
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm text-dark-300">
-                    Confirm new password
-                  </label>
+                  <label className="mb-1 block text-sm text-dark-300">Confirm new password</label>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={confirm}
@@ -112,14 +116,11 @@ export default function ResetPasswordPage() {
                     className="input-field"
                     placeholder="Repeat your new password"
                     required
+                    autoComplete="new-password"
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-primary w-full"
-                >
-                  {loading ? 'Updating...' : 'Update password'}
+                <button type="submit" disabled={loading} className="btn-primary w-full">
+                  {loading ? 'Updating…' : 'Update password'}
                 </button>
               </form>
             </>

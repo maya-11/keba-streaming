@@ -21,16 +21,20 @@ export default function ForgotPasswordPage() {
         ? `${window.location.origin}/auth/callback?next=/auth/reset-password`
         : '/auth/callback?next=/auth/reset-password';
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo,
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
     if (error) {
-      toast.error(error.message);
+      const msg = error.message.toLowerCase();
+      if (msg.includes('too many requests') || msg.includes('rate limit')) {
+        toast.error('Too many requests. Please wait a few minutes before trying again.');
+      } else {
+        toast.error('Failed to send reset email. Please try again.');
+      }
       setLoading(false);
       return;
     }
 
+    // Always show success — don't reveal whether the email exists
     setSent(true);
     setLoading(false);
   };
@@ -49,21 +53,21 @@ export default function ForgotPasswordPage() {
                 <Mail className="h-8 w-8 text-primary-500" />
               </div>
               <h1 className="mb-2 text-2xl font-bold">Check your email</h1>
-              <p className="mb-6 text-dark-400">
-                We sent a password reset link to{' '}
-                <span className="font-medium text-white">{email}</span>.
-                Check your inbox and click the link to reset your password.
+              <p className="mb-4 text-dark-400">
+                If an account exists for{' '}
+                <span className="font-medium text-white">{email}</span>, we&apos;ve sent a
+                password reset link. Check your inbox and click the link to reset your password.
               </p>
               <p className="mb-6 text-sm text-dark-500">
-                Didn't receive the email? Check your spam folder, or try again.
+                Didn&apos;t receive it? Check your spam folder, or try again.
               </p>
-              <button
-                onClick={() => setSent(false)}
-                className="btn-secondary w-full"
-              >
-                Try again
+              <button onClick={() => setSent(false)} className="btn-secondary w-full">
+                Try a different email
               </button>
-              <Link href="/auth/login" className="mt-4 block text-center text-sm text-dark-400 hover:text-white">
+              <Link
+                href="/auth/login"
+                className="mt-4 block text-center text-sm text-dark-400 hover:text-white"
+              >
                 Back to Sign In
               </Link>
             </div>
@@ -77,14 +81,11 @@ export default function ForgotPasswordPage() {
               </Link>
               <h1 className="mb-2 text-2xl font-bold">Reset your password</h1>
               <p className="mb-6 text-sm text-dark-400">
-                Enter the email address for your account and we'll send you a
-                reset link.
+                Enter the email address for your account and we&apos;ll send you a reset link.
               </p>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm text-dark-300">
-                    Email address
-                  </label>
+                  <label className="mb-1 block text-sm text-dark-300">Email address</label>
                   <input
                     type="email"
                     value={email}
@@ -93,14 +94,11 @@ export default function ForgotPasswordPage() {
                     placeholder="you@example.com"
                     required
                     autoFocus
+                    autoComplete="email"
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-primary w-full"
-                >
-                  {loading ? 'Sending...' : 'Send reset link'}
+                <button type="submit" disabled={loading} className="btn-primary w-full">
+                  {loading ? 'Sending…' : 'Send reset link'}
                 </button>
               </form>
             </>
