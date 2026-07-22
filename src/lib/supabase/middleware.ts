@@ -30,7 +30,8 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isResetPage = pathname === '/auth/reset-password';
-  const isAuthPage = pathname.startsWith('/auth') && !isResetPage;
+  const isForgotPage = pathname === '/auth/forgot-password';
+  const isAuthPage = pathname.startsWith('/auth') && !isResetPage && !isForgotPage;
   const isAdminLoginPage = pathname === '/admin/login';
   const isAdminPage = pathname.startsWith('/admin') && !isAdminLoginPage;
   const isProtectedPage =
