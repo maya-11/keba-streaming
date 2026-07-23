@@ -2,24 +2,23 @@
 
 import { useEffect } from 'react';
 
-// Supabase sends all auth redirects (codes AND errors) to the Site URL (/)
-// when the redirectTo URL isn't in the dashboard's allowed list.
-// This component intercepts those params and routes them correctly.
+// Supabase sends auth redirects to the Site URL (/) when the emailRedirectTo
+// URL isn't yet in the dashboard's allowed-redirect list.
+// This component catches those params and routes them to the correct page.
 export function SupabaseErrorRedirect() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const hash = new URLSearchParams(window.location.hash.replace('#', ''));
 
-    // A ?code= means Supabase sent a PKCE auth code here instead of /auth/callback.
-    // Use window.location.href (full page nav) so the API route is actually invoked —
-    // router.replace() doesn't follow server-side redirects from API routes.
+    // ?code= means a PKCE recovery code landed here instead of /auth/reset-password.
+    // Forward it so the reset-password page can exchange it client-side.
     const code = params.get('code');
     if (code) {
-      window.location.href = `/auth/callback?code=${encodeURIComponent(code)}&next=/auth/reset-password`;
+      window.location.replace(`/auth/reset-password?code=${encodeURIComponent(code)}`);
       return;
     }
 
-    // Error params — redirect to login with a clean message
+    // Error params from Supabase (expired OTP, access denied, etc.)
     const errorCode = params.get('error_code') || hash.get('error_code');
     const errorDesc = params.get('error_description') || hash.get('error_description');
 
@@ -34,7 +33,7 @@ export function SupabaseErrorRedirect() {
       message = decodeURIComponent(errorDesc.replace(/\+/g, ' '));
     }
 
-    window.location.href = `/auth/login?error=${encodeURIComponent(message)}`;
+    window.location.replace(`/auth/login?error=${encodeURIComponent(message)}`);
   }, []);
 
   return null;

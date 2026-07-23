@@ -16,10 +16,10 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
 
-    const redirectTo =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/auth/callback?next=/auth/reset-password`
-        : '/auth/callback?next=/auth/reset-password';
+    // Point the recovery link directly at the reset-password page.
+    // The page will exchange the PKCE code client-side so that Supabase
+    // fires the PASSWORD_RECOVERY event correctly.
+    const redirectTo = `${window.location.origin}/auth/reset-password`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
@@ -34,7 +34,6 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    // Always show success — don't reveal whether the email exists
     setSent(true);
     setLoading(false);
   };
@@ -56,7 +55,7 @@ export default function ForgotPasswordPage() {
               <p className="mb-4 text-dark-400">
                 If an account exists for{' '}
                 <span className="font-medium text-white">{email}</span>, we&apos;ve sent a
-                password reset link. Check your inbox and click the link to reset your password.
+                password reset link. Click the link in the email to reset your password.
               </p>
               <p className="mb-6 text-sm text-dark-500">
                 Didn&apos;t receive it? Check your spam folder, or try again.

@@ -19,33 +19,41 @@ export default function ResetPasswordPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Supabase fires PASSWORD_RECOVERY when the PKCE code has been exchanged
-    // and the resulting session is a recovery session.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        // Recovery session established — show the form
-        setPageState('ready');
-      } else if (event === 'SIGNED_IN' && session) {
-        // Regular sign-in landed here (e.g. user already had a session) —
-        // only show the form if we arrived via the recovery flow.
-        // Keep loading a moment longer so PASSWORD_RECOVERY can fire first.
-      } else if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
-        setPageState('no-session');
-      }
-    });
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
 
-    // Also check immediately — if the page is reached after a code exchange
-    // via the callback route, Supabase may have already set the session.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        // Session exists — the PASSWORD_RECOVERY event will fire shortly via
-        // onAuthStateChange. If it doesn't within 1 second, show the form anyway
-        // since being on this page with a session means we came from the reset flow.
-        setTimeout(() => {
-          setPageState((prev) => (prev === 'loading' ? 'ready' : prev));
-        }, 800);
-      } else {
-        // No session at all — the link is expired or already used
+    if (code) {
+      // Exchange the PKCE recovery code client-side.
+      // This is what causes Supabase to fire PASSWORD_RECOVERY (not SIGNED_IN),
+      // and is the only correct way to handle the recovery flow.
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          setPageState('no-session');
+          return;
+        }
+        // Clean the code out of the URL so it can't be reused
+        window.history.replaceState({}, '', '/auth/reset-password');
+      });
+    } else {
+      // No code in URL — check whether there's already a recovery session
+      // (e.g. user refreshed the page after the code was already exchanged)
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          setPageState('ready');
+        } else {
+          setPageState('no-session');
+        }
+      });
+    }
+
+    // Listen for auth events triggered by the code exchange above
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPageState('ready');
+      } else if (event === 'SIGNED_IN') {
+        // exchangeCodeForSession completed — show the form
+        setPageState('ready');
+      } else if (event === 'SIGNED_OUT') {
         setPageState('no-session');
       }
     });
@@ -61,7 +69,7 @@ export default function ResetPasswordPage() {
       return;
     }
     if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
-      toast.error('Your password must meet the minimum security requirements.');
+      toast.error('Your password must contain uppercase, lowercase, and a number.');
       return;
     }
     if (password !== confirm) {
@@ -85,15 +93,13 @@ export default function ResetPasswordPage() {
 
     setPageState('done');
 
-    // Sign out so the user must log in fresh with the new password
+    // Sign out the recovery session — user must log in with their new password
     await supabase.auth.signOut();
 
-    setTimeout(() => {
-      router.push('/auth/login');
-    }, 2500);
+    setTimeout(() => router.push('/auth/login'), 2500);
   };
 
-  // ── Loading ───────────────────────────────────────────────────────────────
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (pageState === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-dark-950">
@@ -102,7 +108,7 @@ export default function ResetPasswordPage() {
     );
   }
 
-  // ── No session / expired link ─────────────────────────────────────────────
+  // ── Expired / invalid link ───────────────────────────────────────────────
   if (pageState === 'no-session') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-dark-950 px-4">
@@ -116,8 +122,8 @@ export default function ResetPasswordPage() {
             </div>
             <h1 className="mb-2 text-2xl font-bold">Link expired</h1>
             <p className="mb-6 text-dark-400">
-              This password reset link has expired or has already been used. Please request a
-              new one.
+              This password reset link has expired or has already been used.
+              Please request a new one.
             </p>
             <Link href="/auth/forgot-password" className="btn-primary block w-full text-center">
               Request new link
@@ -134,7 +140,7 @@ export default function ResetPasswordPage() {
     );
   }
 
-  // ── Success ───────────────────────────────────────────────────────────────
+  // ── Success ──────────────────────────────────────────────────────────────
   if (pageState === 'done') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-dark-950 px-4">
@@ -148,7 +154,7 @@ export default function ResetPasswordPage() {
             </div>
             <h1 className="mb-2 text-2xl font-bold">Password updated!</h1>
             <p className="text-dark-400">
-              Your password has been changed successfully. Redirecting you to sign in…
+              Your password has been changed. Redirecting you to sign in…
             </p>
           </div>
         </div>
@@ -156,7 +162,7 @@ export default function ResetPasswordPage() {
     );
   }
 
-  // ── Reset form ────────────────────────────────────────────────────────────
+  // ── Reset form ───────────────────────────────────────────────────────────
   return (
     <div className="flex min-h-screen items-center justify-center bg-dark-950 px-4">
       <div className="w-full max-w-md">
@@ -165,7 +171,9 @@ export default function ResetPasswordPage() {
         </Link>
         <div className="card p-8">
           <h1 className="mb-2 text-2xl font-bold">Set new password</h1>
-          <p className="mb-6 text-sm text-dark-400">Choose a strong password for your account.</p>
+          <p className="mb-6 text-sm text-dark-400">
+            Choose a strong password for your account.
+          </p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="mb-1 block text-sm text-dark-300">New password</label>
