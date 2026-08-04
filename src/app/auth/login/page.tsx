@@ -16,11 +16,12 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
-  // Show error from auth callback (e.g. bad reset link)
+  // Show error from auth callback (e.g. expired reset link) then clean the URL
   useEffect(() => {
     const error = searchParams.get('error');
     if (error) {
-      toast.error(error);
+      toast.error(decodeURIComponent(error));
+      window.history.replaceState({}, '', '/auth/login');
     }
   }, []);
 

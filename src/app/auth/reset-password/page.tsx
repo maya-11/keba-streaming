@@ -22,41 +22,39 @@ export default function ResetPasswordPage() {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
 
+    // Register the auth state listener BEFORE exchanging the code.
+    // This eliminates the race condition where the PASSWORD_RECOVERY or
+    // SIGNED_IN event fires before the listener is registered.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        setPageState('ready');
+      } else if (event === 'SIGNED_OUT') {
+        // Only treat as no-session if we're still waiting (loading state).
+        // Ignore SIGNED_OUT triggered by our own signOut() call after success.
+        setPageState((prev) => (prev === 'loading' ? 'no-session' : prev));
+      }
+    });
+
     if (code) {
-      // Exchange the PKCE recovery code client-side.
-      // This is what causes Supabase to fire PASSWORD_RECOVERY (not SIGNED_IN),
-      // and is the only correct way to handle the recovery flow.
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
         if (error) {
           setPageState('no-session');
           return;
         }
-        // Clean the code out of the URL so it can't be reused
+        // Belt-and-suspenders: also set ready here in case the auth event
+        // was emitted before the listener above was registered.
+        if (data.session) {
+          setPageState('ready');
+        }
+        // Remove the one-time code from the URL so it cannot be reused
         window.history.replaceState({}, '', '/auth/reset-password');
       });
     } else {
-      // No code in URL — check whether there's already a recovery session
-      // (e.g. user refreshed the page after the code was already exchanged)
+      // No code — check for an existing session (e.g. after page refresh)
       supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          setPageState('ready');
-        } else {
-          setPageState('no-session');
-        }
+        setPageState(session ? 'ready' : 'no-session');
       });
     }
-
-    // Listen for auth events triggered by the code exchange above
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setPageState('ready');
-      } else if (event === 'SIGNED_IN') {
-        // exchangeCodeForSession completed — show the form
-        setPageState('ready');
-      } else if (event === 'SIGNED_OUT') {
-        setPageState('no-session');
-      }
-    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -65,11 +63,11 @@ export default function ResetPasswordPage() {
     e.preventDefault();
 
     if (password.length < 8) {
-      toast.error('Your password must be at least 8 characters long.');
+      toast.error('Password must be at least 8 characters long.');
       return;
     }
     if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
-      toast.error('Your password must contain uppercase, lowercase, and a number.');
+      toast.error('Password must contain an uppercase letter, a lowercase letter, and a number.');
       return;
     }
     if (password !== confirm) {
@@ -78,6 +76,7 @@ export default function ResetPasswordPage() {
     }
 
     setLoading(true);
+
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
@@ -85,15 +84,16 @@ export default function ResetPasswordPage() {
       if (msg.includes('same password') || msg.includes('different from')) {
         toast.error('Your new password must be different from your current password.');
       } else {
-        toast.error('Failed to update password. Please request a new reset link.');
+        toast.error('Failed to update password. Your reset link may have expired. Please request a new one.');
       }
       setLoading(false);
       return;
     }
 
+    // Mark success BEFORE signing out to prevent the SIGNED_OUT listener
+    // from overwriting this state with 'no-session'.
     setPageState('done');
 
-    // Sign out the recovery session — user must log in with their new password
     await supabase.auth.signOut();
 
     setTimeout(() => router.push('/auth/login'), 2500);
@@ -154,7 +154,7 @@ export default function ResetPasswordPage() {
             </div>
             <h1 className="mb-2 text-2xl font-bold">Password updated!</h1>
             <p className="text-dark-400">
-              Your password has been changed. Redirecting you to sign in…
+              Your password has been changed successfully. Redirecting you to sign in…
             </p>
           </div>
         </div>
@@ -171,9 +171,7 @@ export default function ResetPasswordPage() {
         </Link>
         <div className="card p-8">
           <h1 className="mb-2 text-2xl font-bold">Set new password</h1>
-          <p className="mb-6 text-sm text-dark-400">
-            Choose a strong password for your account.
-          </p>
+          <p className="mb-6 text-sm text-dark-400">Choose a strong password for your account.</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="mb-1 block text-sm text-dark-300">New password</label>
