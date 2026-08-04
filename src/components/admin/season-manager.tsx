@@ -23,14 +23,16 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
 
   useEffect(() => { loadSeasons(); }, [contentId]);
 
+  const sb = supabase as any;
+
   const loadSeasons = async () => {
-    const { data } = await supabase.from('seasons').select('*').eq('content_id', contentId).order('season_number');
-    setSeasons(data || []);
+    const { data } = await sb.from('seasons').select('*').eq('content_id', contentId).order('season_number');
+    setSeasons((data as Season[]) || []);
   };
 
   const loadEpisodes = async (seasonId: string) => {
-    const { data } = await supabase.from('episodes').select('*').eq('season_id', seasonId).order('episode_number');
-    setEpisodes((prev) => ({ ...prev, [seasonId]: data || [] }));
+    const { data } = await sb.from('episodes').select('*').eq('season_id', seasonId).order('episode_number');
+    setEpisodes((prev) => ({ ...prev, [seasonId]: (data as Episode[]) || [] }));
   };
 
   const toggleSeason = async (seasonId: string) => {
@@ -40,27 +42,27 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
   };
 
   const addSeason = async () => {
-    const { error } = await supabase.from('seasons').insert({ content_id: contentId, ...seasonForm });
+    const { error } = await sb.from('seasons').insert({ content_id: contentId, ...seasonForm });
     if (error) toast.error('Failed to add season');
     else { toast.success('Season added'); loadSeasons(); setShowSeasonModal(false); setSeasonForm({ season_number: seasons.length + 2, title: '', description: '' }); }
   };
 
   const deleteSeason = async (id: string) => {
     if (!confirm('Delete this season and all episodes?')) return;
-    await supabase.from('seasons').delete().eq('id', id);
+    await sb.from('seasons').delete().eq('id', id);
     toast.success('Season deleted');
     loadSeasons();
   };
 
   const addEpisode = async (seasonId: string) => {
-    const { error } = await supabase.from('episodes').insert({ season_id: seasonId, content_id: contentId, ...episodeForm });
+    const { error } = await sb.from('episodes').insert({ season_id: seasonId, content_id: contentId, ...episodeForm });
     if (error) toast.error('Failed to add episode: ' + error.message);
     else { toast.success('Episode added'); loadEpisodes(seasonId); setShowEpisodeModal(null); setEpisodeForm({ episode_number: 1, title: '', description: '', duration: 0, cloudflare_video_id: '', thumbnail_url: '' }); }
   };
 
   const deleteEpisode = async (episodeId: string, seasonId: string) => {
     if (!confirm('Delete this episode?')) return;
-    await supabase.from('episodes').delete().eq('id', episodeId);
+    await sb.from('episodes').delete().eq('id', episodeId);
     toast.success('Episode deleted');
     loadEpisodes(seasonId);
   };

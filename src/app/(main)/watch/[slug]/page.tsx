@@ -37,15 +37,15 @@ export default function WatchPage() {
     loadWatch();
   }, [slug, episodeId]);
 
+  const sb = supabase as any;
+
   const loadWatch = async () => {
     setLoading(true);
     setError('');
 
-    const { data: contentData, error: contentError } = await (supabase as any)
-      .from('content')
-      .select('*')
-      .eq('slug', slug)
-      .single() as { data: Content | null; error: any };
+    const contentRes = await sb.from('content').select('*').eq('slug', slug).single();
+    const contentData = contentRes.data as Content | null;
+    const contentError = contentRes.error;
 
     if (contentError || !contentData) {
       setError('Content not found');
@@ -60,11 +60,9 @@ export default function WatchPage() {
     let videoUrl = '';
 
     if (episodeId) {
-      const { data: epData, error: epError } = await (supabase as any)
-        .from('episodes')
-        .select('*')
-        .eq('id', episodeId)
-        .single() as { data: Episode | null; error: any };
+      const epRes = await sb.from('episodes').select('*').eq('id', episodeId).single();
+      const epData = epRes.data as Episode | null;
+      const epError = epRes.error;
 
       if (epError || !epData) {
         setError('Episode not found');
@@ -92,9 +90,8 @@ export default function WatchPage() {
       setStreamUrl(`https://${subdomain}/${videoUrl}/manifest/video.m3u8`);
     }
 
-    // Load existing progress
     if (user) {
-      const query = (supabase as any)
+      const query = sb
         .from('watch_history')
         .select('progress')
         .eq('user_id', user.id)
@@ -102,11 +99,11 @@ export default function WatchPage() {
         .order('watched_at', { ascending: false })
         .limit(1);
 
-      const { data: history } = episodeId
+      const histRes = episodeId
         ? await query.eq('episode_id', episodeId).maybeSingle()
         : await query.is('episode_id', null).maybeSingle();
 
-      if (history) setInitialProgress((history as any).progress || 0);
+      if (histRes.data) setInitialProgress(histRes.data.progress || 0);
     }
 
     setLoading(false);
