@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Search, Bell, Menu, X, User, LogOut, Heart, History } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -44,8 +45,8 @@ export function Navbar() {
     <nav className="fixed top-0 z-40 w-full bg-gradient-to-b from-dark-950/90 to-transparent backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link href="/browse" className="text-2xl font-bold text-primary-500">
-            KEBA
+          <Link href="/browse" className="flex items-center">
+            <Image src="/keba-logo.jpg" alt="Keba Entertainmentz" width={48} height={48} className="rounded-sm object-contain" priority />
           </Link>
           <div className="hidden items-center gap-6 md:flex">
             {navLinks.map((link) => (

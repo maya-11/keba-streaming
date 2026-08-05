@@ -1,7 +1,8 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
@@ -166,8 +167,8 @@ export default function ResetPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-dark-950 px-4">
       <div className="w-full max-w-md">
-        <Link href="/" className="mb-8 block text-center text-3xl font-bold text-primary-500">
-          KEBA
+        <Link href="/" className="mb-8 flex justify-center">
+          <Image src="/keba-logo.jpg" alt="Keba Entertainmentz" width={72} height={72} className="rounded-sm object-contain" priority />
         </Link>
         <div className="card p-8">
           <h1 className="mb-2 text-2xl font-bold">Set new password</h1>
