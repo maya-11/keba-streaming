@@ -4,6 +4,18 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
 
+  const pathname = request.nextUrl.pathname;
+
+  // ── Intercept recovery codes BEFORE creating the Supabase client ──
+  // Supabase sends the reset link to the Site URL (/?code=...) when
+  // redirectTo isn't in the dashboard's allowed-redirect list.
+  // We must redirect immediately — before getUser() — so the SSR
+  // client never touches the one-time PKCE code and invalidates it.
+  if (pathname === '/' && request.nextUrl.searchParams.has('code')) {
+    const code = request.nextUrl.searchParams.get('code')!;
+    return NextResponse.redirect(new URL(`/auth/reset-password?code=${code}`, request.url));
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -27,16 +39,6 @@ export async function updateSession(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
-
-  // Supabase sends the recovery code to the Site URL (/) when the redirectTo
-  // URL isn't in the dashboard's allowed-redirect list. Catch it here and
-  // forward to the reset-password page before React even renders.
-  if (pathname === '/' && request.nextUrl.searchParams.has('code')) {
-    const code = request.nextUrl.searchParams.get('code')!;
-    return NextResponse.redirect(new URL(`/auth/reset-password?code=${code}`, request.url));
-  }
   const isResetPage = pathname === '/auth/reset-password';
   const isForgotPage = pathname === '/auth/forgot-password';
   const isAuthPage = pathname.startsWith('/auth') && !isResetPage && !isForgotPage;
