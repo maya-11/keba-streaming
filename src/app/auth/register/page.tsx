@@ -71,7 +71,7 @@ export default function RegisterPage() {
       } else if (msg.includes('weak password') || msg.includes('password should')) {
         toast.error('Your password must meet the minimum security requirements.');
       } else {
-        toast.error('Registration failed. Please check your details and try again.');
+        toast.error(error.message || 'Registration failed. Please check your details and try again.');
       }
       setLoading(false);
       return;
