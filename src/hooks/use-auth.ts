@@ -21,11 +21,12 @@ export function useAuth() {
         const hasActiveSession = sessionStorage.getItem(SESSION_KEY);
 
         if (!hasActiveSession) {
-          // New browser session — clear the stored auth and force to login
+          // New browser session — sign out and hard-redirect.
+          // Do NOT call setLoading(false) — keep the spinner visible so the
+          // browse page never flashes before the redirect fires.
           await supabase.auth.signOut();
           setUser(null);
           setProfile(null);
-          setLoading(false);
           window.location.replace('/auth/login');
           return;
         }
