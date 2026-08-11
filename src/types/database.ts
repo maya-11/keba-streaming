@@ -27,6 +27,7 @@ export interface Database {
           subscription_end?: string | null;
         };
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
+        Relationships: [];
       };
       content: {
         Row: {
@@ -68,6 +69,7 @@ export interface Database {
           is_published?: boolean;
         };
         Update: Partial<Database['public']['Tables']['content']['Insert']>;
+        Relationships: [];
       };
       seasons: {
         Row: {
@@ -88,6 +90,7 @@ export interface Database {
           poster_url?: string | null;
         };
         Update: Partial<Database['public']['Tables']['seasons']['Insert']>;
+        Relationships: [];
       };
       episodes: {
         Row: {
@@ -114,6 +117,7 @@ export interface Database {
           cloudflare_video_id: string;
         };
         Update: Partial<Database['public']['Tables']['episodes']['Insert']>;
+        Relationships: [];
       };
       genres: {
         Row: {
@@ -128,6 +132,7 @@ export interface Database {
           slug: string;
         };
         Update: Partial<Database['public']['Tables']['genres']['Insert']>;
+        Relationships: [];
       };
       watch_history: {
         Row: {
@@ -150,6 +155,7 @@ export interface Database {
           completed?: boolean;
         };
         Update: Partial<Database['public']['Tables']['watch_history']['Insert']>;
+        Relationships: [];
       };
       my_list: {
         Row: {
@@ -164,6 +170,7 @@ export interface Database {
           content_id: string;
         };
         Update: Partial<Database['public']['Tables']['my_list']['Insert']>;
+        Relationships: [];
       };
       subscription_plans: {
         Row: {
@@ -194,6 +201,7 @@ export interface Database {
           is_active?: boolean;
         };
         Update: Partial<Database['public']['Tables']['subscription_plans']['Insert']>;
+        Relationships: [];
       };
       push_subscriptions: {
         Row: {
@@ -210,6 +218,7 @@ export interface Database {
           keys: Json;
         };
         Update: Partial<Database['public']['Tables']['push_subscriptions']['Insert']>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
