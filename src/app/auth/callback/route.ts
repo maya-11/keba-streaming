@@ -1,22 +1,63 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+/**
+ * Server-side auth callback handler.
+ *
+ * All Supabase email links (password reset, confirmation, magic link) land
+ * here first. The server exchanges the one-time code for a session using
+ * cookies — no PKCE verifier in localStorage needed. This works regardless
+ * of which browser or device the user clicks the link from.
+ *
+ * Configure this as the Redirect URL in Supabase:
+ *   https://keba-streaming.vercel.app/auth/callback
+ */
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
+  const type = searchParams.get('type');
   const next = searchParams.get('next') ?? '/browse';
 
-  if (code) {
-    const supabase = createServerSupabaseClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
-    }
+  if (!code) {
+    return NextResponse.redirect(new URL('/auth/login?error=missing_code', request.url));
   }
 
-  // Redirect to login with a user-friendly error message
-  const errorMsg = encodeURIComponent(
-    'This link has expired or is invalid. Please request a new one.'
+  const cookieStore = cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({ name, value: '', ...options });
+        },
+      },
+    }
   );
-  return NextResponse.redirect(`${origin}/auth/login?error=${errorMsg}`);
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    console.error('[auth/callback] exchangeCodeForSession error:', error.message);
+    return NextResponse.redirect(
+      new URL(`/auth/login?error=${encodeURIComponent('Link expired or already used. Please request a new one.')}`, request.url)
+    );
+  }
+
+  // Route by type
+  if (type === 'recovery') {
+    // Password reset — send to the reset form (session is now set in cookies)
+    return NextResponse.redirect(new URL('/auth/reset-password', request.url));
+  }
+
+  // Signup confirmation, magic link, email change — go to browse
+  return NextResponse.redirect(new URL(next, request.url));
 }

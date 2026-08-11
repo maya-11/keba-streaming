@@ -20,42 +20,19 @@ export default function ResetPasswordPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-
-    // Register the auth state listener BEFORE exchanging the code.
-    // This eliminates the race condition where the PASSWORD_RECOVERY or
-    // SIGNED_IN event fires before the listener is registered.
+    // The session is already established server-side by /auth/callback.
+    // We just check whether a valid session exists in cookies.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         setPageState('ready');
       } else if (event === 'SIGNED_OUT') {
-        // Only treat as no-session if we're still waiting (loading state).
-        // Ignore SIGNED_OUT triggered by our own signOut() call after success.
         setPageState((prev) => (prev === 'loading' ? 'no-session' : prev));
       }
     });
 
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
-        if (error) {
-          setPageState('no-session');
-          return;
-        }
-        // Belt-and-suspenders: also set ready here in case the auth event
-        // was emitted before the listener above was registered.
-        if (data.session) {
-          setPageState('ready');
-        }
-        // Remove the one-time code from the URL so it cannot be reused
-        window.history.replaceState({}, '', '/auth/reset-password');
-      });
-    } else {
-      // No code — check for an existing session (e.g. after page refresh)
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setPageState(session ? 'ready' : 'no-session');
-      });
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setPageState(session ? 'ready' : 'no-session');
+    });
 
     return () => subscription.unsubscribe();
   }, []);

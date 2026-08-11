@@ -7,26 +7,13 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // ── Intercept auth codes BEFORE creating the Supabase client ──
-  // Supabase sends all email links back to the Site URL (/?code=...).
-  // We MUST redirect before getUser() — the SSR client consuming the
-  // one-time PKCE code invalidates it before the page can exchange it.
+  // Supabase sends all email links (reset, confirm, magic link) to the
+  // Site URL as /?code=... We forward everything to /auth/callback which
+  // exchanges the code SERVER-SIDE — no PKCE verifier in localStorage
+  // needed, works from any browser or device.
   if (pathname === '/' && request.nextUrl.searchParams.has('code')) {
-    const code = request.nextUrl.searchParams.get('code')!;
-    const type = request.nextUrl.searchParams.get('type');
-
-    // Password recovery → reset-password form
-    if (type === 'recovery') {
-      return NextResponse.redirect(new URL(`/auth/reset-password?code=${code}`, request.url));
-    }
-
-    // Email confirmation (signup / email change) → confirm page
-    // Also catches codes with no type (older Supabase recovery links)
-    if (type === 'signup' || type === 'email_change' || type === 'magiclink') {
-      return NextResponse.redirect(new URL(`/auth/confirm?code=${code}&type=${type ?? ''}`, request.url));
-    }
-
-    // Fallback: no type param — treat as recovery (old behaviour kept)
-    return NextResponse.redirect(new URL(`/auth/reset-password?code=${code}`, request.url));
+    const params = request.nextUrl.searchParams.toString();
+    return NextResponse.redirect(new URL(`/auth/callback?${params}`, request.url));
   }
 
   const supabase = createServerClient(
@@ -55,7 +42,8 @@ export async function updateSession(request: NextRequest) {
   const isResetPage = pathname === '/auth/reset-password';
   const isForgotPage = pathname === '/auth/forgot-password';
   const isConfirmPage = pathname === '/auth/confirm';
-  const isAuthPage = pathname.startsWith('/auth') && !isResetPage && !isForgotPage && !isConfirmPage;
+  const isCallbackRoute = pathname === '/auth/callback';
+  const isAuthPage = pathname.startsWith('/auth') && !isResetPage && !isForgotPage && !isConfirmPage && !isCallbackRoute;
   const isAdminLoginPage = pathname === '/admin/login';
   const isAdminPage = pathname.startsWith('/admin') && !isAdminLoginPage;
   const isProtectedPage =
