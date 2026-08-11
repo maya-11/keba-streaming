@@ -7,39 +7,41 @@
 @layer base {
   body {
     @apply bg-dark-950 text-white antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
-  ::-webkit-scrollbar {
-    @apply w-2;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-dark-900;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-dark-600 rounded-full;
-  }
+  ::-webkit-scrollbar { @apply w-1.5; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-dark-700 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-dark-600; }
+
+  /* Hide horizontal scrollbar on content rows */
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-primary-600 hover:bg-primary-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-primary-900/30 active:scale-95;
   }
   .btn-secondary {
-    @apply bg-dark-700 hover:bg-dark-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 border border-dark-500;
+    @apply bg-dark-800 hover:bg-dark-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 border border-dark-600 hover:border-dark-500 active:scale-95;
   }
   .btn-ghost {
-    @apply hover:bg-dark-800 text-dark-200 font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply hover:bg-dark-800/80 text-dark-200 hover:text-white font-medium py-2 px-4 rounded-lg transition-all duration-200;
   }
   .input-field {
-    @apply w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-3 text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all;
+    @apply w-full bg-dark-800/80 border border-dark-700 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500/50 transition-all duration-200;
   }
   .card {
-    @apply bg-dark-900 rounded-xl border border-dark-800 overflow-hidden;
+    @apply bg-dark-900 rounded-2xl border border-dark-800/80 overflow-hidden;
   }
   .content-card {
-    @apply relative cursor-pointer transition-transform duration-300 hover:scale-105 hover:z-10;
+    @apply relative cursor-pointer;
   }
   .gradient-overlay {
     @apply absolute inset-0 bg-gradient-to-t from-dark-950 via-transparent to-transparent;
+  }
+  .section-heading {
+    @apply text-base font-bold tracking-tight text-white md:text-lg;
   }
 }

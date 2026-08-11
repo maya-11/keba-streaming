@@ -42,7 +42,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 z-40 w-full bg-gradient-to-b from-dark-950/90 to-transparent backdrop-blur-sm">
+    <nav className="fixed top-0 z-40 w-full bg-gradient-to-b from-dark-950/95 via-dark-950/70 to-transparent backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <div className="flex items-center gap-8">
           <Link href="/browse" className="flex items-center">
