@@ -55,7 +55,14 @@ export default function RegisterPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: {
+        data: { full_name: fullName },
+        // Send the confirmation link back to THIS origin (localhost in dev,
+        // the real domain in prod) so /auth/confirm can verify it with
+        // verifyOtp — no code_verifier cookie needed, so it works even if
+        // the user opens the email in a different browser/device/app.
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+      },
     });
 
     if (error) {

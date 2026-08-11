@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import type { EmailOtpType } from '@supabase/supabase-js';
 
 export default function ConfirmPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -15,36 +16,54 @@ export default function ConfirmPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
+    const tokenHash = params.get('token_hash');
     const type = params.get('type');
+    const code = params.get('code'); // legacy fallback for links sent before this fix
 
-    if (!code) {
-      setStatus('error');
-      setMessage('Invalid confirmation link. Please request a new one.');
-      return;
-    }
-
-    supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
-      if (error) {
+    const onSuccess = (hasSession: boolean) => {
+      if (!hasSession) {
         setStatus('error');
         setMessage('This confirmation link has expired or already been used. Please request a new one.');
         return;
       }
 
-      if (data.session) {
-        // Set the session flag so use-auth doesn't immediately sign them out
-        sessionStorage.setItem('keba_browser_session', 'true');
-        setStatus('success');
+      // Set the session flag so use-auth doesn't immediately sign them out
+      sessionStorage.setItem('keba_browser_session', 'true');
+      setStatus('success');
 
-        if (type === 'email_change') {
-          setMessage('Your email address has been updated successfully.');
-        } else {
-          setMessage('Your account has been confirmed! Taking you to Keba…');
-        }
-
-        setTimeout(() => router.push('/browse'), 2000);
+      if (type === 'email_change') {
+        setMessage('Your email address has been updated successfully.');
+      } else {
+        setMessage('Your account has been confirmed! Taking you to Keba…');
       }
-    });
+
+      setTimeout(() => router.push('/browse'), 2000);
+    };
+
+    const onError = () => {
+      setStatus('error');
+      setMessage('This confirmation link has expired or already been used. Please request a new one.');
+    };
+
+    if (tokenHash && type) {
+      // Preferred path: verifying a token_hash doesn't need any secret stored
+      // on this device, so it works even if the link is opened in a
+      // different browser/app than the one used to register.
+      supabase.auth
+        .verifyOtp({ token_hash: tokenHash, type: type as EmailOtpType })
+        .then(({ data, error }) => (error ? onError() : onSuccess(!!data.session)));
+      return;
+    }
+
+    if (code) {
+      supabase.auth
+        .exchangeCodeForSession(code)
+        .then(({ data, error }) => (error ? onError() : onSuccess(!!data.session)));
+      return;
+    }
+
+    setStatus('error');
+    setMessage('Invalid confirmation link. Please request a new one.');
   }, []);
 
   return (
