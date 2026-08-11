@@ -86,6 +86,7 @@ export default function RegisterPage() {
 
     // Email confirmation is OFF — session returned immediately
     if (data.session) {
+      sessionStorage.setItem('keba_browser_session', 'true');
       toast.success('Welcome to Keba!');
       router.push('/browse');
       router.refresh();

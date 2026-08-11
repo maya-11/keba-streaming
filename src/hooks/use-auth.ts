@@ -11,6 +11,25 @@ export function useAuth() {
   useEffect(() => {
     const getSession = async () => {
       const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        // Force sign-in every browser session.
+        // sessionStorage is cleared when the browser/tab is closed, so a
+        // returning user who has no flag set gets signed out immediately and
+        // must authenticate again — satisfying the manager's requirement.
+        const SESSION_KEY = 'keba_browser_session';
+        const hasActiveSession = sessionStorage.getItem(SESSION_KEY);
+
+        if (!hasActiveSession) {
+          // New browser session — clear the stored auth and redirect to login
+          await supabase.auth.signOut();
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+      }
+
       setUser(user);
       if (user) {
         const { data } = await supabase

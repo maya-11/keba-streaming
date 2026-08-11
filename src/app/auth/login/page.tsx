@@ -72,6 +72,10 @@ function LoginForm() {
       return;
     }
 
+    // Mark this browser tab as an active session so use-auth won't force
+    // a sign-out. This flag lives only in sessionStorage — it's gone the
+    // moment the user closes the browser/tab.
+    sessionStorage.setItem('keba_browser_session', 'true');
     toast.success('Welcome back!');
     router.push('/browse');
     router.refresh();
