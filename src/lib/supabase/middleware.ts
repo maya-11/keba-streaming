@@ -6,13 +6,26 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // ── Intercept recovery codes BEFORE creating the Supabase client ──
-  // Supabase sends the reset link to the Site URL (/?code=...) when
-  // redirectTo isn't in the dashboard's allowed-redirect list.
-  // We must redirect immediately — before getUser() — so the SSR
-  // client never touches the one-time PKCE code and invalidates it.
+  // ── Intercept auth codes BEFORE creating the Supabase client ──
+  // Supabase sends all email links back to the Site URL (/?code=...).
+  // We MUST redirect before getUser() — the SSR client consuming the
+  // one-time PKCE code invalidates it before the page can exchange it.
   if (pathname === '/' && request.nextUrl.searchParams.has('code')) {
     const code = request.nextUrl.searchParams.get('code')!;
+    const type = request.nextUrl.searchParams.get('type');
+
+    // Password recovery → reset-password form
+    if (type === 'recovery') {
+      return NextResponse.redirect(new URL(`/auth/reset-password?code=${code}`, request.url));
+    }
+
+    // Email confirmation (signup / email change) → confirm page
+    // Also catches codes with no type (older Supabase recovery links)
+    if (type === 'signup' || type === 'email_change' || type === 'magiclink') {
+      return NextResponse.redirect(new URL(`/auth/confirm?code=${code}&type=${type ?? ''}`, request.url));
+    }
+
+    // Fallback: no type param — treat as recovery (old behaviour kept)
     return NextResponse.redirect(new URL(`/auth/reset-password?code=${code}`, request.url));
   }
 
@@ -41,7 +54,8 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const isResetPage = pathname === '/auth/reset-password';
   const isForgotPage = pathname === '/auth/forgot-password';
-  const isAuthPage = pathname.startsWith('/auth') && !isResetPage && !isForgotPage;
+  const isConfirmPage = pathname === '/auth/confirm';
+  const isAuthPage = pathname.startsWith('/auth') && !isResetPage && !isForgotPage && !isConfirmPage;
   const isAdminLoginPage = pathname === '/admin/login';
   const isAdminPage = pathname.startsWith('/admin') && !isAdminLoginPage;
   const isProtectedPage =
