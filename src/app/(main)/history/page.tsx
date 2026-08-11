@@ -111,7 +111,6 @@ export default function HistoryPage() {
                       fill
                       className="object-cover"
                       sizes="192px"
-                      unoptimized
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center">

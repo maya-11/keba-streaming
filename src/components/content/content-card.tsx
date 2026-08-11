@@ -28,7 +28,6 @@ export function ContentCard({ content, inList, onToggleList }: ContentCardProps)
               fill
               className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
               sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 15vw"
-              unoptimized
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-b from-dark-700 to-dark-900 p-3 text-center">

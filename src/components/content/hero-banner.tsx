@@ -35,7 +35,14 @@ export function HeroBanner({ items }: HeroBannerProps) {
       {/* Background */}
       <div className={`absolute inset-0 transition-opacity duration-500 ${fading ? 'opacity-0' : 'opacity-100'}`}>
         {(item.backdrop_url || item.poster_url) ? (
-          <Image src={item.backdrop_url || item.poster_url!} alt={item.title} fill className="object-cover object-center" priority unoptimized />
+          <Image
+            src={item.backdrop_url || item.poster_url!}
+            alt={item.title}
+            fill
+            className="object-cover object-center"
+            priority
+            sizes="100vw"
+          />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-dark-800 to-dark-950" />
         )}
