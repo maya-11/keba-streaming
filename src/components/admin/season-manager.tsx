@@ -80,7 +80,7 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
 
   const addSeason = async () => {
     const { error } = await sb.from('seasons').insert({ content_id: contentId, ...seasonForm });
-    if (error) toast.error('Failed to add season');
+    if (error) toast.error('Failed to add season: ' + error.message);
     else { toast.success('Season added'); loadSeasons(); setShowSeasonModal(false); setSeasonForm({ season_number: seasons.length + 2, title: '', description: '' }); }
   };
 
