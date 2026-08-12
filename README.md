@@ -1,12 +1,14 @@
 # Keba Streaming Platform
 
-A Netflix/Showmax-style Progressive Web App built with Next.js, React, TypeScript, Tailwind CSS, Supabase, and Cloudflare Stream.
+A Netflix/Showmax-style Progressive Web App built with Next.js, React, TypeScript, Tailwind CSS, and Supabase.
 
 ## Features
 
 - **User Features**: Sign up, login, browse movies/series, search, watch videos, continue watching, watch history, my list/favourites, subscription management, push notifications, offline support (PWA), responsive UI for all devices
 - **Admin Portal**: Content management (movies, series, seasons, episodes), genre management, user management, subscription plan management, featured content management, analytics dashboard
-- **Tech Stack**: Next.js 14, React 18, TypeScript, Tailwind CSS, Supabase (Auth, Database, Storage), Cloudflare Stream, Vercel
+- **Tech Stack**: Next.js 14, React 18, TypeScript, Tailwind CSS, Supabase (Auth, Database, Storage), Vercel
+
+Video is uploaded and served straight from Supabase Storage — there is no Cloudflare Stream dependency.
 
 ## Setup
 
@@ -14,7 +16,6 @@ A Netflix/Showmax-style Progressive Web App built with Next.js, React, TypeScrip
 
 - Node.js 20+
 - A [Supabase](https://supabase.com) project
-- A [Cloudflare](https://cloudflare.com) account with Stream enabled
 
 ### 2. Clone and Install
 
@@ -36,9 +37,6 @@ Required variables:
 - `NEXT_PUBLIC_SUPABASE_URL` — Your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
 - `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-side only)
-- `CLOUDFLARE_ACCOUNT_ID` — Cloudflare account ID
-- `CLOUDFLARE_API_TOKEN` — Cloudflare API token with Stream permissions
-- `CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN` — Your Stream customer subdomain
 
 ### 4. Database Setup
 
@@ -52,7 +50,7 @@ This creates all tables, indexes, RLS policies, triggers, and seeds initial data
 
 ### 5. Supabase Storage
 
-Create a public bucket named `media` in Supabase Storage for thumbnails/posters.
+Create a public bucket named `media` in Supabase Storage — used for thumbnails, posters, and video files (uploads are capped at 50MB by Supabase's free-tier storage limit).
 
 ### 6. Generate VAPID Keys (Push Notifications)
 
@@ -116,7 +114,7 @@ src/
 │   ├── pwa/             # Service worker registration
 │   └── ui/              # Shared UI components
 ├── hooks/               # Custom React hooks
-├── lib/                 # Supabase client, Cloudflare helpers
+├── lib/                 # Supabase client helpers
 ├── store/               # Zustand state management
 └── types/               # TypeScript types
 ```

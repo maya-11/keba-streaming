@@ -9,25 +9,20 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [debugInfo, setDebugInfo] = useState('');
   const router = useRouter();
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setDebugInfo('');
 
     // Step 1: Sign in
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) {
       toast.error(authError.message);
-      setDebugInfo('Auth error: ' + authError.message);
       setLoading(false);
       return;
     }
-
-    setDebugInfo('Signed in as: ' + authData.user.id);
 
     // Step 2: Read profile
     const { data: profile, error: profileError } = await supabase
@@ -37,18 +32,14 @@ export default function AdminLoginPage() {
       .single();
 
     if (profileError) {
-      setDebugInfo('Profile error: ' + profileError.message + ' | code: ' + profileError.code);
       toast.error('Could not load profile: ' + profileError.message);
       await supabase.auth.signOut();
       setLoading(false);
       return;
     }
 
-    setDebugInfo('Profile found: ' + JSON.stringify(profile));
-
     if (profile?.role !== 'admin') {
       toast.error('Access denied. Your role is: ' + (profile?.role || 'none'));
-      setDebugInfo('Role is not admin, it is: ' + profile?.role);
       await supabase.auth.signOut();
       setLoading(false);
       return;
@@ -93,13 +84,6 @@ export default function AdminLoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          {debugInfo && (
-            <div className="mt-4 rounded-lg bg-dark-800 p-3 text-xs text-dark-300 break-all">
-              <p className="mb-1 font-semibold text-yellow-400">Debug Info:</p>
-              {debugInfo}
-            </div>
-          )}
         </div>
       </div>
     </div>
