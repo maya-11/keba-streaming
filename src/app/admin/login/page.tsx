@@ -54,6 +54,10 @@ export default function AdminLoginPage() {
       return;
     }
 
+    // Mark this browser tab as an active session so use-auth's "force
+    // sign-in every visit" check doesn't treat this as a stale session and
+    // immediately sign the admin back out (see auth/login/page.tsx).
+    sessionStorage.setItem('keba_browser_session', 'true');
     toast.success('Welcome, Admin!');
     router.push('/admin');
   };
