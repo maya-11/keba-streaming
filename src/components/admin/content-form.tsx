@@ -304,6 +304,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
       </div>
 
       {/* Video */}
+      {form.type === 'movie' ? (
       <div className="card p-6 space-y-4">
         <h2 className="text-lg font-semibold">Video</h2>
 
@@ -354,6 +355,16 @@ export function ContentForm({ initialData }: ContentFormProps) {
           <p className="mt-1 text-xs text-dark-500">Supports YouTube links and direct MP4 URLs</p>
         </div>
       </div>
+      ) : (
+        <div className="card p-6 space-y-2 border border-primary-800/50 bg-primary-900/10">
+          <h2 className="text-lg font-semibold">Video</h2>
+          <p className="text-sm text-dark-300">
+            Series don&apos;t have a single video — each episode has its own. Save this form first,
+            then scroll down to <strong>Seasons &amp; Episodes</strong> to add a season, add an
+            episode, and attach that episode&apos;s video there.
+          </p>
+        </div>
+      )}
 
       {/* Publishing */}
       <div className="card p-6 space-y-4">

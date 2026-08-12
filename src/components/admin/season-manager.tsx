@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Plus, Trash2, ChevronDown, ChevronUp, Upload } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Upload, Film, X } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import type { Season, Episode } from '@/types/database';
 import toast from 'react-hot-toast';
@@ -18,8 +18,45 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
   const [expandedSeason, setExpandedSeason] = useState<string | null>(null);
   const [showSeasonModal, setShowSeasonModal] = useState(false);
   const [showEpisodeModal, setShowEpisodeModal] = useState<string | null>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [seasonForm, setSeasonForm] = useState({ season_number: 1, title: '', description: '' });
   const [episodeForm, setEpisodeForm] = useState({ episode_number: 1, title: '', description: '', duration: 0, cloudflare_video_id: '', thumbnail_url: '' });
+
+  const handleEpisodeVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxSize = 50 * 1024 * 1024; // 50MB — Supabase Storage default limit
+    if (file.size > maxSize) {
+      toast.error('Video must be under 50MB. For larger files use a YouTube URL instead.');
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingVideo(true);
+    toast.loading('Uploading video...', { id: 'ep-video-upload' });
+
+    const ext = file.name.split('.').pop();
+    const path = `videos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error } = await supabase.storage.from('media').upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+    });
+
+    if (error) {
+      toast.error('Video upload failed: ' + error.message, { id: 'ep-video-upload' });
+      setUploadingVideo(false);
+      e.target.value = '';
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path);
+    setEpisodeForm((f) => ({ ...f, cloudflare_video_id: publicUrl }));
+    toast.success('Video uploaded successfully!', { id: 'ep-video-upload' });
+    setUploadingVideo(false);
+    e.target.value = '';
+  };
 
   useEffect(() => { loadSeasons(); }, [contentId]);
 
@@ -160,14 +197,54 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
             <textarea value={episodeForm.description} onChange={(e) => setEpisodeForm((f) => ({ ...f, description: e.target.value }))} className="input-field" />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-dark-300">Cloudflare Video ID *</label>
-            <input type="text" value={episodeForm.cloudflare_video_id} onChange={(e) => setEpisodeForm((f) => ({ ...f, cloudflare_video_id: e.target.value }))} className="input-field" />
+            <label className="mb-1 block text-sm text-dark-300">Video *</label>
+
+            {episodeForm.cloudflare_video_id && (
+              <div className="mb-2 flex items-center gap-3 rounded-lg bg-green-900/20 border border-green-800 p-3">
+                <Film className="h-5 w-5 text-green-400 flex-shrink-0" />
+                <p className="min-w-0 flex-1 truncate text-xs text-dark-400">{episodeForm.cloudflare_video_id}</p>
+                <button
+                  type="button"
+                  onClick={() => setEpisodeForm((f) => ({ ...f, cloudflare_video_id: '' }))}
+                  className="text-dark-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            <label className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-dark-600 p-6 transition-colors hover:border-primary-500 ${uploadingVideo ? 'opacity-50' : ''}`}>
+              <Upload className="mb-1 h-6 w-6 text-dark-500" />
+              <p className="text-xs font-medium">{uploadingVideo ? 'Uploading... please wait' : 'Click to upload video'}</p>
+              <p className="mt-1 text-[11px] text-dark-500">MP4, WebM, MOV — max 50MB</p>
+              <input
+                type="file"
+                accept="video/mp4,video/webm,video/mov,video/quicktime,video/*"
+                onChange={handleEpisodeVideoUpload}
+                className="hidden"
+                disabled={uploadingVideo}
+              />
+            </label>
+
+            <input
+              type="text"
+              value={episodeForm.cloudflare_video_id}
+              onChange={(e) => setEpisodeForm((f) => ({ ...f, cloudflare_video_id: e.target.value }))}
+              className="input-field mt-2 text-sm"
+              placeholder="Or paste a YouTube link or direct video URL"
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm text-dark-300">Thumbnail URL</label>
             <input type="text" value={episodeForm.thumbnail_url} onChange={(e) => setEpisodeForm((f) => ({ ...f, thumbnail_url: e.target.value }))} className="input-field" />
           </div>
-          <button onClick={() => showEpisodeModal && addEpisode(showEpisodeModal)} className="btn-primary w-full">Add Episode</button>
+          <button
+            onClick={() => showEpisodeModal && addEpisode(showEpisodeModal)}
+            disabled={uploadingVideo || !episodeForm.cloudflare_video_id}
+            className="btn-primary w-full disabled:opacity-50"
+          >
+            {uploadingVideo ? 'Uploading video...' : 'Add Episode'}
+          </button>
         </div>
       </Modal>
     </div>
