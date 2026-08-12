@@ -78,8 +78,21 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
     if (!episodes[seasonId]) await loadEpisodes(seasonId);
   };
 
+  // Occasionally the browser's session cookie is momentarily stale right
+  // after a login or navigation, which makes an otherwise-valid admin
+  // insert get rejected by the RLS policy (Postgres error 42501). Refreshing
+  // the session and retrying once clears this up without bothering the
+  // admin with an error that a second click would've fixed anyway.
+  const insertWithRetry = async (table: 'seasons' | 'episodes', row: Record<string, unknown>) => {
+    const first = await sb.from(table).insert(row);
+    if (!first.error || first.error.code !== '42501') return first;
+
+    await supabase.auth.refreshSession();
+    return sb.from(table).insert(row);
+  };
+
   const addSeason = async () => {
-    const { error } = await sb.from('seasons').insert({ content_id: contentId, ...seasonForm });
+    const { error } = await insertWithRetry('seasons', { content_id: contentId, ...seasonForm });
     if (error) toast.error('Failed to add season: ' + error.message);
     else { toast.success('Season added'); loadSeasons(); setShowSeasonModal(false); setSeasonForm({ season_number: seasons.length + 2, title: '', description: '' }); }
   };
@@ -92,7 +105,7 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
   };
 
   const addEpisode = async (seasonId: string) => {
-    const { error } = await sb.from('episodes').insert({ season_id: seasonId, content_id: contentId, ...episodeForm });
+    const { error } = await insertWithRetry('episodes', { season_id: seasonId, content_id: contentId, ...episodeForm });
     if (error) toast.error('Failed to add episode: ' + error.message);
     else { toast.success('Episode added'); loadEpisodes(seasonId); setShowEpisodeModal(null); setEpisodeForm({ episode_number: 1, title: '', description: '', duration: 0, cloudflare_video_id: '', thumbnail_url: '' }); }
   };
