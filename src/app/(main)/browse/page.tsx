@@ -44,11 +44,17 @@ export default function BrowsePage() {
     setNewReleases(newData || []);
     setTrending((allContent || []).slice(0, 20));
 
+    // Each title only appears once across all genre rows, under the first
+    // matching genre (genres are already alphabetically ordered), instead
+    // of repeating in every genre it's tagged with.
     const byGenre: Record<string, Content[]> = {};
+    const alreadyShown = new Set<string>();
     (genresData || []).forEach((genre) => {
-      byGenre[genre.id] = (allContent || []).filter((c) =>
-        c.genre_ids?.includes(genre.id)
-      );
+      byGenre[genre.id] = (allContent || []).filter((c) => {
+        if (!c.genre_ids?.includes(genre.id) || alreadyShown.has(c.id)) return false;
+        alreadyShown.add(c.id);
+        return true;
+      });
     });
     setContentByGenre(byGenre);
 
