@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase/server';
 
 webpush.setVapidDetails(
   `mailto:admin@${process.env.NEXT_PUBLIC_APP_URL || 'localhost'}`,
@@ -8,7 +8,20 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY || ''
 );
 
+// Only admins can broadcast a push notification to every subscribed user.
+async function verifyAdmin() {
+  const supabase = createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  return (profile as any)?.role === 'admin';
+}
+
 export async function POST(request: NextRequest) {
+  if (!(await verifyAdmin())) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const { title, body, url } = await request.json();
   const supabase = createAdminClient();
 

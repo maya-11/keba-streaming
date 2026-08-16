@@ -13,11 +13,19 @@ import { cookies } from 'next/headers';
  * Configure this as the Redirect URL in Supabase:
  *   https://keba-streaming.vercel.app/auth/callback
  */
+// Only allow redirecting to a same-origin relative path — a `next` value
+// like `https://evil.example` or `//evil.example` would otherwise send a
+// freshly-authenticated session straight to an attacker-controlled site.
+function safeNextPath(next: string | null): string {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/browse';
+  return next;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const type = searchParams.get('type');
-  const next = searchParams.get('next') ?? '/browse';
+  const next = safeNextPath(searchParams.get('next'));
 
   if (!code) {
     return NextResponse.redirect(new URL('/auth/login?error=missing_code', request.url));

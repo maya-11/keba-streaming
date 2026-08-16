@@ -103,6 +103,7 @@ export default function TitlePage() {
   if (!content) return null;
 
   const contentGenres = genres.filter((g) => content.genre_ids?.includes(g.id));
+  const hasPlayableEpisode = content.type === 'movie' || !!episodes[0];
   const watchHref = content.type === 'movie' ? `/watch/${content.slug}` : episodes[0] ? `/watch/${content.slug}?episode=${episodes[0].id}` : '#';
 
   return (
@@ -142,9 +143,19 @@ export default function TitlePage() {
             )}
             <p className="mb-6 text-dark-200">{content.description}</p>
             <div className="flex gap-3">
-              <Link href={watchHref} className="btn-primary flex items-center gap-2">
-                <Play className="h-5 w-5" fill="white" /> Play
-              </Link>
+              {hasPlayableEpisode ? (
+                <Link href={watchHref} className="btn-primary flex items-center gap-2">
+                  <Play className="h-5 w-5" fill="white" /> Play
+                </Link>
+              ) : (
+                <button
+                  disabled
+                  className="btn-primary flex cursor-not-allowed items-center gap-2 opacity-50"
+                  title="Video coming soon"
+                >
+                  <Play className="h-5 w-5" fill="white" /> Coming Soon
+                </button>
+              )}
               <button onClick={toggleList} className="btn-secondary flex items-center gap-2">
                 {inList ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
                 {inList ? 'In My List' : 'My List'}

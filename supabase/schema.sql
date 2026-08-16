@@ -167,6 +167,30 @@ create trigger profiles_updated_at before update on public.profiles
 create trigger content_updated_at before update on public.content
   for each row execute procedure public.update_updated_at();
 
+-- Prevent privilege escalation: "Users can update own profile" below only
+-- restricts WHICH row a user can touch (their own), not which columns they
+-- can set on it — without this trigger, any authenticated user can call
+-- `.from('profiles').update({ role: 'admin' })` on their own row directly
+-- from the browser and grant themselves admin (or a free subscription) with
+-- no server-side check involved. Silently reverts role/subscription fields
+-- back to their prior value unless the request is made with the service
+-- role key (i.e. from trusted server-side code, not a user's browser).
+create or replace function public.prevent_profile_privilege_escalation()
+returns trigger as $$
+begin
+  if auth.role() <> 'service_role' then
+    new.role := old.role;
+    new.subscription_status := old.subscription_status;
+    new.subscription_plan := old.subscription_plan;
+    new.subscription_end := old.subscription_end;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger protect_profile_privileges before update on public.profiles
+  for each row execute procedure public.prevent_profile_privilege_escalation();
+
 -- Row Level Security
 alter table public.profiles enable row level security;
 alter table public.content enable row level security;
