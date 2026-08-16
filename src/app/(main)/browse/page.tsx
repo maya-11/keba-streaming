@@ -17,6 +17,8 @@ export default function BrowsePage() {
   const [continueWatching, setContinueWatching] = useState<(WatchHistory & { content: Content })[]>([]);
   const [trending, setTrending] = useState<Content[]>([]);
   const [newReleases, setNewReleases] = useState<Content[]>([]);
+  const [mostFinished, setMostFinished] = useState<Content[]>([]);
+  const [becauseYouWatched, setBecauseYouWatched] = useState<{ title: string; items: Content[] }>({ title: '', items: [] });
   const [myListIds, setMyListIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -32,17 +34,20 @@ export default function BrowsePage() {
       { data: genresData },
       { data: allContent },
       { data: newData },
+      { data: finishedData },
     ] = await Promise.all([
       supabase.from('content').select('*').eq('is_featured', true).eq('is_published', true).limit(5),
       supabase.from('genres').select('*').order('name'),
       supabase.from('content').select('*').eq('is_published', true).order('created_at', { ascending: false }),
       supabase.from('content').select('*').eq('is_published', true).order('created_at', { ascending: false }).limit(20),
+      supabase.from('content').select('*').eq('is_published', true).gt('completion_count', 0).order('completion_count', { ascending: false }).limit(20),
     ]);
 
     setFeatured(featuredData || []);
     setGenres(genresData || []);
     setNewReleases(newData || []);
     setTrending((allContent || []).slice(0, 20));
+    setMostFinished(finishedData || []);
 
     // Each title only appears once across all genre rows, under the first
     // matching genre (genres are already alphabetically ordered), instead
@@ -59,7 +64,7 @@ export default function BrowsePage() {
     setContentByGenre(byGenre);
 
     if (user) {
-      const [{ data: historyData }, { data: listData }] = await Promise.all([
+      const [{ data: historyData }, { data: listData }, { data: recentWatch }] = await Promise.all([
         supabase
           .from('watch_history')
           .select('*, content(*)')
@@ -68,9 +73,28 @@ export default function BrowsePage() {
           .order('watched_at', { ascending: false })
           .limit(20),
         supabase.from('my_list').select('content_id').eq('user_id', user.id),
+        // Most recent thing this user watched anything of, used to seed
+        // "Because You Watched X" — simple rule-based recommendation, no AI.
+        supabase
+          .from('watch_history')
+          .select('content_id, content(*)')
+          .eq('user_id', user.id)
+          .order('watched_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       setContinueWatching((historyData as any) || []);
       setMyListIds(new Set((listData || []).map((item) => item.content_id)));
+
+      const seed = (recentWatch as any)?.content as Content | undefined;
+      if (seed?.genre_ids?.length) {
+        const { data: watchedIds } = await supabase.from('watch_history').select('content_id').eq('user_id', user.id);
+        const excludeIds = new Set((watchedIds || []).map((w) => w.content_id));
+        const similar = (allContent || []).filter(
+          (c) => c.id !== seed.id && !excludeIds.has(c.id) && c.genre_ids?.some((g) => seed.genre_ids.includes(g))
+        );
+        if (similar.length) setBecauseYouWatched({ title: `Because You Watched ${seed.title.trim()}`, items: similar.slice(0, 20) });
+      }
     }
 
     setLoading(false);
@@ -106,6 +130,14 @@ export default function BrowsePage() {
 
       <ContentRow title="Trending Now" items={trending} listIds={myListIds} onToggleList={toggleList} />
       <ContentRow title="New Releases" items={newReleases} listIds={myListIds} onToggleList={toggleList} />
+
+      {becauseYouWatched.items.length > 0 && (
+        <ContentRow title={becauseYouWatched.title} items={becauseYouWatched.items} listIds={myListIds} onToggleList={toggleList} />
+      )}
+
+      {mostFinished.length > 0 && (
+        <ContentRow title="Most Finished" items={mostFinished} listIds={myListIds} onToggleList={toggleList} />
+      )}
 
       {genres.map((genre) => {
         const items = contentByGenre[genre.id] || [];

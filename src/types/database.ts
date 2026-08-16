@@ -46,6 +46,7 @@ export interface Database {
           trailer_url: string | null;
           cloudflare_video_id: string | null;
           subtitle_url: string | null;
+          completion_count: number;
           is_featured: boolean;
           is_published: boolean;
           created_at: string;

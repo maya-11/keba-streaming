@@ -42,6 +42,7 @@ create table public.content (
   trailer_url text,
   cloudflare_video_id text,
   subtitle_url text,
+  completion_count integer not null default 0,
   is_featured boolean not null default false,
   is_published boolean not null default false,
   created_at timestamptz not null default now(),
@@ -89,6 +90,24 @@ create table public.watch_history (
 );
 
 create unique index watch_history_unique on public.watch_history (user_id, content_id, coalesce(episode_id, '00000000-0000-0000-0000-000000000000'));
+
+-- Keeps content.completion_count in sync automatically. Regular users can
+-- only read their own watch_history rows (RLS), so the "Most Finished" row
+-- on the browse page needs this aggregate counter instead of computing it
+-- from watch_history directly.
+create or replace function public.increment_completion_count()
+returns trigger as $$
+begin
+  if new.completed = true and (tg_op = 'INSERT' or old.completed is distinct from true) then
+    update public.content set completion_count = completion_count + 1 where id = new.content_id;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger watch_history_completion_count
+  after insert or update on public.watch_history
+  for each row execute procedure public.increment_completion_count();
 
 -- My List / Favourites
 create table public.my_list (
