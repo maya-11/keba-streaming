@@ -41,6 +41,7 @@ create table public.content (
   backdrop_url text,
   trailer_url text,
   cloudflare_video_id text,
+  subtitle_url text,
   is_featured boolean not null default false,
   is_published boolean not null default false,
   created_at timestamptz not null default now(),
@@ -70,6 +71,7 @@ create table public.episodes (
   duration integer not null,
   thumbnail_url text,
   cloudflare_video_id text not null,
+  subtitle_url text,
   created_at timestamptz not null default now(),
   unique(season_id, episode_number)
 );

@@ -35,6 +35,7 @@ export function ContentForm({ initialData }: ContentFormProps) {
     backdrop_url: initialData?.backdrop_url || '',
     trailer_url: initialData?.trailer_url || '',
     cloudflare_video_id: initialData?.cloudflare_video_id || '',
+    subtitle_url: initialData?.subtitle_url || '',
     is_featured: initialData?.is_featured || false,
     is_published: initialData?.is_published || false,
   });
@@ -111,6 +112,28 @@ export function ContentForm({ initialData }: ContentFormProps) {
     toast.success('Video uploaded successfully!', { id: 'video-upload' });
     setUploadingVideo(false);
     setVideoProgress(100);
+    e.target.value = '';
+  };
+
+  const handleSubtitleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage('subtitle');
+    const ext = file.name.split('.').pop();
+    const path = `subtitles/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+
+    if (error) {
+      toast.error('Subtitle upload failed: ' + error.message);
+      setUploadingImage(null);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path);
+    setForm((f) => ({ ...f, subtitle_url: publicUrl }));
+    toast.success('Subtitle uploaded');
+    setUploadingImage(null);
     e.target.value = '';
   };
 
@@ -353,6 +376,33 @@ export function ContentForm({ initialData }: ContentFormProps) {
             placeholder="https://www.youtube.com/watch?v=... or https://example.com/video.mp4"
           />
           <p className="mt-1 text-xs text-dark-500">Supports YouTube links and direct MP4 URLs</p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm text-dark-300">Subtitles (optional)</label>
+          {form.subtitle_url && (
+            <div className="mb-2 flex items-center gap-3 rounded-lg bg-green-900/20 border border-green-800 p-3">
+              <p className="min-w-0 flex-1 truncate text-xs text-dark-400">{form.subtitle_url}</p>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, subtitle_url: '' }))}
+                className="text-dark-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          <label className={`btn-secondary inline-flex cursor-pointer items-center gap-1 text-sm ${uploadingImage === 'subtitle' ? 'opacity-50' : ''}`}>
+            <Upload className="h-4 w-4" />
+            {uploadingImage === 'subtitle' ? 'Uploading...' : 'Upload subtitle file (.vtt or .srt)'}
+            <input
+              type="file"
+              accept=".vtt,.srt,text/vtt"
+              onChange={handleSubtitleUpload}
+              className="hidden"
+              disabled={uploadingImage !== null}
+            />
+          </label>
         </div>
       </div>
       ) : (

@@ -45,6 +45,7 @@ export interface Database {
           backdrop_url: string | null;
           trailer_url: string | null;
           cloudflare_video_id: string | null;
+          subtitle_url: string | null;
           is_featured: boolean;
           is_published: boolean;
           created_at: string;
@@ -65,6 +66,7 @@ export interface Database {
           backdrop_url?: string | null;
           trailer_url?: string | null;
           cloudflare_video_id?: string | null;
+          subtitle_url?: string | null;
           is_featured?: boolean;
           is_published?: boolean;
         };
@@ -103,6 +105,7 @@ export interface Database {
           duration: number;
           thumbnail_url: string | null;
           cloudflare_video_id: string;
+          subtitle_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -115,6 +118,7 @@ export interface Database {
           duration: number;
           thumbnail_url?: string | null;
           cloudflare_video_id: string;
+          subtitle_url?: string | null;
         };
         Update: Partial<Database['public']['Tables']['episodes']['Insert']>;
         Relationships: [];

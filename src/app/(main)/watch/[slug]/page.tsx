@@ -22,6 +22,7 @@ export default function WatchPage() {
   const [contentId, setContentId] = useState('');
   const [episodeDbId, setEpisodeDbId] = useState<string | null>(null);
   const [streamUrl, setStreamUrl] = useState('');
+  const [subtitleUrl, setSubtitleUrl] = useState('');
   const [poster, setPoster] = useState('');
   const [initialProgress, setInitialProgress] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -73,8 +74,10 @@ export default function WatchPage() {
       setEpisodeDbId(epData.id);
       setTitle(`${contentData.title} — Episode ${epData.episode_number}: ${epData.title}`);
       videoUrl = epData.cloudflare_video_id || '';
+      setSubtitleUrl(epData.subtitle_url || '');
     } else {
       videoUrl = contentData.cloudflare_video_id || '';
+      setSubtitleUrl(contentData.subtitle_url || '');
     }
 
     if (!videoUrl) {
@@ -151,6 +154,7 @@ export default function WatchPage() {
         src={streamUrl}
         poster={poster}
         title={title}
+        subtitleUrl={subtitleUrl}
         onProgress={handleProgress}
         onDurationKnown={handleDurationKnown}
         initialProgress={initialProgress}

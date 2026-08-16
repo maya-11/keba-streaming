@@ -19,8 +19,31 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
   const [showSeasonModal, setShowSeasonModal] = useState(false);
   const [showEpisodeModal, setShowEpisodeModal] = useState<string | null>(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingSubtitle, setUploadingSubtitle] = useState(false);
   const [seasonForm, setSeasonForm] = useState({ season_number: 1, title: '', description: '' });
-  const [episodeForm, setEpisodeForm] = useState({ episode_number: 1, title: '', description: '', duration: 0, cloudflare_video_id: '', thumbnail_url: '' });
+  const [episodeForm, setEpisodeForm] = useState({ episode_number: 1, title: '', description: '', duration: 0, cloudflare_video_id: '', thumbnail_url: '', subtitle_url: '' });
+
+  const handleEpisodeSubtitleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingSubtitle(true);
+    const ext = file.name.split('.').pop();
+    const path = `subtitles/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+
+    if (error) {
+      toast.error('Subtitle upload failed: ' + error.message);
+      setUploadingSubtitle(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path);
+    setEpisodeForm((f) => ({ ...f, subtitle_url: publicUrl }));
+    toast.success('Subtitle uploaded');
+    setUploadingSubtitle(false);
+    e.target.value = '';
+  };
 
   const handleEpisodeVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -107,7 +130,7 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
   const addEpisode = async (seasonId: string) => {
     const { error } = await insertWithRetry('episodes', { season_id: seasonId, content_id: contentId, ...episodeForm });
     if (error) toast.error('Failed to add episode: ' + error.message);
-    else { toast.success('Episode added'); loadEpisodes(seasonId); setShowEpisodeModal(null); setEpisodeForm({ episode_number: 1, title: '', description: '', duration: 0, cloudflare_video_id: '', thumbnail_url: '' }); }
+    else { toast.success('Episode added'); loadEpisodes(seasonId); setShowEpisodeModal(null); setEpisodeForm({ episode_number: 1, title: '', description: '', duration: 0, cloudflare_video_id: '', thumbnail_url: '', subtitle_url: '' }); }
   };
 
   const deleteEpisode = async (episodeId: string, seasonId: string) => {
@@ -142,7 +165,7 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
             {expandedSeason === season.id && (
               <div className="border-t border-dark-800 p-4">
                 <div className="mb-3 flex justify-end">
-                  <button onClick={() => { setEpisodeForm({ episode_number: (episodes[season.id]?.length || 0) + 1, title: '', description: '', duration: 0, cloudflare_video_id: '', thumbnail_url: '' }); setShowEpisodeModal(season.id); }} className="btn-secondary flex items-center gap-1 text-sm">
+                  <button onClick={() => { setEpisodeForm({ episode_number: (episodes[season.id]?.length || 0) + 1, title: '', description: '', duration: 0, cloudflare_video_id: '', thumbnail_url: '', subtitle_url: '' }); setShowEpisodeModal(season.id); }} className="btn-secondary flex items-center gap-1 text-sm">
                     <Plus className="h-4 w-4" /> Add Episode
                   </button>
                 </div>
@@ -251,12 +274,38 @@ export function SeasonManager({ contentId }: SeasonManagerProps) {
             <label className="mb-1 block text-sm text-dark-300">Thumbnail URL</label>
             <input type="text" value={episodeForm.thumbnail_url} onChange={(e) => setEpisodeForm((f) => ({ ...f, thumbnail_url: e.target.value }))} className="input-field" />
           </div>
+          <div>
+            <label className="mb-1 block text-sm text-dark-300">Subtitles (optional)</label>
+            {episodeForm.subtitle_url && (
+              <div className="mb-2 flex items-center gap-3 rounded-lg bg-green-900/20 border border-green-800 p-3">
+                <p className="min-w-0 flex-1 truncate text-xs text-dark-400">{episodeForm.subtitle_url}</p>
+                <button
+                  type="button"
+                  onClick={() => setEpisodeForm((f) => ({ ...f, subtitle_url: '' }))}
+                  className="text-dark-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            <label className={`btn-secondary inline-flex cursor-pointer items-center gap-1 text-sm ${uploadingSubtitle ? 'opacity-50' : ''}`}>
+              <Upload className="h-4 w-4" />
+              {uploadingSubtitle ? 'Uploading...' : 'Upload subtitle file (.vtt or .srt)'}
+              <input
+                type="file"
+                accept=".vtt,.srt,text/vtt"
+                onChange={handleEpisodeSubtitleUpload}
+                className="hidden"
+                disabled={uploadingSubtitle}
+              />
+            </label>
+          </div>
           <button
             onClick={() => showEpisodeModal && addEpisode(showEpisodeModal)}
-            disabled={uploadingVideo || !episodeForm.cloudflare_video_id}
+            disabled={uploadingVideo || uploadingSubtitle || !episodeForm.cloudflare_video_id}
             className="btn-primary w-full disabled:opacity-50"
           >
-            {uploadingVideo ? 'Uploading video...' : 'Add Episode'}
+            {uploadingVideo ? 'Uploading video...' : uploadingSubtitle ? 'Uploading subtitle...' : 'Add Episode'}
           </button>
         </div>
       </Modal>

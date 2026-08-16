@@ -10,6 +10,7 @@ interface VideoPlayerProps {
   src: string;
   poster?: string;
   title?: string;
+  subtitleUrl?: string;
   onProgress?: (progress: number, duration: number) => void;
   onDurationKnown?: (duration: number) => void;
   initialProgress?: number;
@@ -28,7 +29,7 @@ function getYouTubeId(src: string) {
 }
 
 export function VideoPlayer({
-  src, poster, title, onProgress, onDurationKnown, initialProgress, autoPlay
+  src, poster, title, subtitleUrl, onProgress, onDurationKnown, initialProgress, autoPlay
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -217,7 +218,11 @@ export function VideoPlayer({
           if (v && onProgress) onProgress(v.duration, v.duration);
         }}
         onError={() => setError('Failed to load video. Check the URL or file format.')}
-      />
+      >
+        {subtitleUrl && (
+          <track kind="subtitles" src={subtitleUrl} srcLang="en" label="English" default />
+        )}
+      </video>
 
       {/* Error state */}
       {error && (
