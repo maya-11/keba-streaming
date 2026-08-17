@@ -67,7 +67,9 @@ export default function BrowsePage() {
       const [{ data: historyData }, { data: listData }, { data: recentWatch }] = await Promise.all([
         supabase
           .from('watch_history')
-          .select('*, content(*)')
+          // !inner drops rows whose content is unpublished/deleted, instead
+          // of returning them with content: null and crashing the row below.
+          .select('*, content!inner(*)')
           .eq('user_id', user.id)
           .eq('completed', false)
           .order('watched_at', { ascending: false })
@@ -77,7 +79,7 @@ export default function BrowsePage() {
         // "Because You Watched X" — simple rule-based recommendation, no AI.
         supabase
           .from('watch_history')
-          .select('content_id, content(*)')
+          .select('content_id, content!inner(*)')
           .eq('user_id', user.id)
           .order('watched_at', { ascending: false })
           .limit(1)

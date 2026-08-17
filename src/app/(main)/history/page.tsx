@@ -37,7 +37,9 @@ export default function HistoryPage() {
   const loadHistory = async () => {
     const { data, error } = await supabase
       .from('watch_history')
-      .select('*, content(*), episodes(id, title, episode_number)')
+      // !inner drops rows whose content is unpublished/deleted, instead of
+      // returning them with content: null and crashing the render below.
+      .select('*, content!inner(*), episodes(id, title, episode_number)')
       .eq('user_id', user!.id)
       .order('watched_at', { ascending: false })
       .limit(100);
